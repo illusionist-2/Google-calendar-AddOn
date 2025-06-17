@@ -18,14 +18,23 @@ function declineEventsWithoutAttachments() {
 
   for (const event of events.items) {
     try {
-      const hasAttachments = event.attachments && event.attachments.length > 0;
+      const attachments = event.attachments || [];
+      const description = (event.description || "").trim();
+      const hasAttachments = attachments.length > 0;
+      const hasDescription = description.length > 0;
 
       const attendees = event.attendees || [];
       const self = attendees.find(a => a.self);
 
-      if (!hasAttachments && self && self.responseStatus !== "declined") {
+      // Skip if you're not invited
+      if (!self || self.responseStatus === "declined") continue;
+
+      // Decline if no attachments AND no description
+      if (!hasAttachments && !hasDescription) {
+
         Logger.log(`Declining event: "${event.summary}"`);
 
+        // Decline event
         Calendar.Events.patch({
           attendees: [{
             email: self.email,
