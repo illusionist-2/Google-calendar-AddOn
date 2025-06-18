@@ -1,5 +1,6 @@
 function declineEventsWithoutAttachments() {
   const calendarId = "primary";
+  const orgDomains = ["wiom.in", "i2e1.com"]; // <-- Replace with your domain
   const now = new Date();
   const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
 
@@ -26,7 +27,19 @@ function declineEventsWithoutAttachments() {
       const attendees = event.attendees || [];
       const self = attendees.find(a => a.self);
 
-      // Skip if you're not invited
+      const organizerEmail = event.organizer?.email || "";
+      let isInternalOrganizer = false;
+      for(let i=0;i<orgDomains.length;++i){
+        isInternalOrganizer = organizerEmail.endsWith("@" + orgDomains[i]);
+
+        if(isInternalOrganizer)
+          break;
+      }
+
+      // Only act on events from internal organizers
+      if (!isInternalOrganizer) continue;
+
+      // Skip if you're not invited or already declined
       if (!self || self.responseStatus === "declined") continue;
 
       // Decline if no attachments AND no description
