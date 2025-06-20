@@ -41,26 +41,31 @@ function declineEventsWithoutAttachments() {
       }
 
       const organizerEmail = event.organizer?.email || "";
-      let isInternalOrganizer = false;
-      for(let i=0;i<orgDomains.length;++i){
-        isInternalOrganizer = organizerEmail.endsWith("@" + orgDomains[i]);
+      const isInternalOrganizer = orgDomains.some(domain => organizerEmail.endsWith("@" + domain));
 
-        if(isInternalOrganizer)
-          break;
+      // ❌ Skip if organizer is external
+      if (!isInternalOrganizer) {
+        Logger.log(`Skipping "${event.summary}" due to external organizer: ${organizerEmail}`);
+        continue;
       }
 
-      // Only act on events from internal organizers
-      if (!isInternalOrganizer) continue;
+      // ✅ Check event duration (ignore if ≤ 15 minutes)
+      const start = new Date(event.start.dateTime || event.start.date);
+      const end = new Date(event.end.dateTime || event.end.date);
+      const durationMinutes = (end - start) / (1000 * 60);
+      if (durationMinutes <= 15) {
+        Logger.log(`Skipping "${event.summary}" — only ${durationMinutes} minutes long.`);
+        continue;
+      }
 
       const hasAttachments = (event.attachments || []).length > 0;
       const hasDescription = (event.description || "").trim().length > 0;
 
       // Decline if no attachments AND no description
       if (!hasAttachments && !hasDescription) {
+        Logger.log(`Declining "${event.summary}" due to no attachments or description.`);
 
-        Logger.log(`Declining event: "${event.summary}"`);
-
-        // Decline event
+        // Decline
         Calendar.Events.patch({
           attendees: [{
             email: self.email,
@@ -68,16 +73,18 @@ function declineEventsWithoutAttachments() {
           }]
         }, calendarId, event.id);
 
-        // Notify the organizer (if different from self)
-        if (event.organizer && event.organizer.email !== self.email) {
-          GmailApp.sendEmail(event.organizer.email,
+        // Notify organizer
+        if (organizerEmail !== self.email) {
+          GmailApp.sendEmail(
+            organizerEmail,
             `Declined: ${event.summary}`,
-            `Hi,\n\nI'm declining the event "${event.summary}" scheduled at ${event.start.dateTime || event.start.date} because it has no attachments.\n\nRegards,\nAshutosh Auto-Calendar Assistant`);
+            `Hi,\n\nI'm declining the event "${event.summary}" because it has no description or pre-read attached.\nPlease attach a pre-read and resend the invite if needed.\n\nRegards,\nAshutosh's Assistant`
+          );
         }
       }
 
     } catch (e) {
-      Logger.log(`Failed to process event "${event.summary}": ${e}`);
+      Logger.log(`Error processing "${event.summary}": ${e.message}`);
     }
   }
 }
