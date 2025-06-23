@@ -63,18 +63,20 @@ function declineEventsWithoutAttachments() {
 
       // Decline if no attachments AND no description
       if (!hasAttachments && !hasDescription) {
-        Logger.log(`Declining "${event.summary}" due to no attachments or description.`);
-
-        // Decline
-        Calendar.Events.patch({
-          attendees: [{
-            email: self.email,
-            responseStatus: "declined"
-          }]
-        }, calendarId, event.id);
+        
 
         // Notify organizer
         if (organizerEmail !== self.email) {
+
+          Logger.log(`Declining "${event.summary}" due to no attachments or description.`);
+
+          // Decline
+          Calendar.Events.patch({
+            attendees: [{
+              email: self.email,
+              responseStatus: "declined"
+            }]
+          }, calendarId, event.id);
 
           const assistantName = `${getFirstNameFromEmail()}'s Assistant`;
           GmailApp.sendEmail(
