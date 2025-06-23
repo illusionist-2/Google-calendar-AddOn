@@ -78,11 +78,13 @@ function declineEventsWithoutAttachments() {
             }]
           }, calendarId, event.id);
 
-          const assistantName = `${getFirstNameFromEmail()}'s Assistant`;
+          const myName = getFirstNameFromEmailAddress(Session.getActiveUser().getEmail());
+          const assistantName = `${myName}'s Assistant`;
+          const organizerName = getFirstNameFromEmailAddress(organizerEmail);
           GmailApp.sendEmail(
             organizerEmail,
             `Declined: ${event.summary}`,
-            `Hi,\n\nI'm declining the event "${event.summary}" because it has no description or pre-read attached.\nPlease attach a pre-read and resend the invite if needed.\n\nRegards,\n${assistantName}`
+            `Hi ${organizerName},\n\nI'm declining the event "${event.summary}" because it has no description or pre-read attached.\nPlease attach a pre-read and resend the invite if needed.\n\nRegards,\n${assistantName}`
           );
         }
       }
@@ -94,8 +96,7 @@ function declineEventsWithoutAttachments() {
   }
 }
 
-function getFirstNameFromEmail() {
-  const email = Session.getActiveUser().getEmail();
+function getFirstNameFromEmailAddress(email) {
   const localPart = email.split('@')[0];
   const firstName = localPart.split('.')[0];
   return capitalize(firstName);
