@@ -54,12 +54,12 @@ function declineEventsWithoutAttachments() {
       const end = new Date(event.end.dateTime || event.end.date);
       const durationMinutes = (end - start) / (1000 * 60);
       if (durationMinutes <= 15) {
-        Logger.log(`Skipping "${event.summary}" — only ${durationMinutes} minutes long.`);
+        Logger.log(`Skipping "${event.summary}" due to short duration: ${durationMinutes} minutes.`);
         continue;
       }
 
       const hasAttachments = (event.attachments || []).length > 0;
-      const hasDescription = (event.description || "").trim().length > 0;
+      const hasDescription = (event.description || "").replace(/<[^>]*>/g, "").trim().length > 0;
 
       // Decline if no attachments AND no description
       if (!hasAttachments && !hasDescription) {
@@ -75,10 +75,12 @@ function declineEventsWithoutAttachments() {
 
         // Notify organizer
         if (organizerEmail !== self.email) {
+
+          const assistantName = `${getFirstNameFromEmail()}'s Assistant`;
           GmailApp.sendEmail(
             organizerEmail,
             `Declined: ${event.summary}`,
-            `Hi,\n\nI'm declining the event "${event.summary}" because it has no description or pre-read attached.\nPlease attach a pre-read and resend the invite if needed.\n\nRegards,\nAshutosh's Assistant`
+            `Hi,\n\nI'm declining the event "${event.summary}" because it has no description or pre-read attached.\nPlease attach a pre-read and resend the invite if needed.\n\nRegards,\n${assistantName}`
           );
         }
       }
@@ -86,5 +88,17 @@ function declineEventsWithoutAttachments() {
     } catch (e) {
       Logger.log(`Error processing "${event.summary}": ${e.message}`);
     }
+    Utilities.sleep(500);
   }
+}
+
+function getFirstNameFromEmail() {
+  const email = Session.getActiveUser().getEmail();
+  const localPart = email.split('@')[0];
+  const firstName = localPart.split('.')[0];
+  return capitalize(firstName);
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
